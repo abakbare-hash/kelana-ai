@@ -1,41 +1,38 @@
-days            = int(input("Days : "))
-budget          = float(input("Budget : "))
-travel_month    = input("Travel Month : ")
-
-# Reuse them anywhere
-def print_trip_summary(days, budget, travel_month):
- print("========================================")
- print("KelanaAI")
- print("========================================")
- print(f"Destination    : Japan")
- print(f"Days           : {days}")
- print(f"Budget         : {budget} USD")
- print(f"Travel Month   : {travel_month}")
-
+from fastapi import FastAPI
+from pydantic import BaseModel
 from services.trip_service import (
-    calculate_daily_budget, 
-    get_trip_category, 
-    get_travel_season,
+    calculate_daily_budget,
+    get_trip_category,
+    get_transportation_recommendation,
+    get_recommended_place,
 )
+class TripRequest(BaseModel):
+    destination:    str
+    days:           int
+    budget:         float
+    travel_style:   str
+app = FastAPI()
+@app.get("/")
+def home():
+    return {"message" : "Hurray to KelanaAI"}
+@app.post("/api/v1/trips")
+def create_trip(request: TripRequest):
+    daily_budget = calculate_daily_budget(
+        request.budget, request.days
+    )
+    category = get_trip_category(
+        request.budget
+    )
+    transportation = get_transportation_recommendation(category)
+    places = get_recommended_place(request.destination)
+    return {
+        "destination"                   : request.destination,
+        "budget"                        : request.budget,
+        "travel_style"                  : request.travel_style,
+        "daily_budget"                  : daily_budget,
+        "category"                      : category,
+        "transportation_recommendation" : transportation,
+        "recommended_places"            : places      
+    }
 
-daily = calculate_daily_budget(budget,days)
-category = get_trip_category(budget)
 
-# Call it with any trip
-print_trip_summary(days, budget, travel_month)
-
-
-print(f"Daily Budget   : {daily} USD/day")
-print(f"Category       : {category}")
-
-
-season = get_travel_season(travel_month)
-print(f"Season         : {season}")
-
-recommended_place = ["Tokyo Tower", "Shibuya", "Mount Fuji"]
-
-# Loop through the list
-print()
-print(f"Recommended Place :")
-for place in recommended_place:
-    print(f" - {place}")
