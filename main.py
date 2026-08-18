@@ -17,22 +17,23 @@ def home():
     return {"message" : "Hurray to KelanaAI"}
 @app.post("/api/v1/trips")
 def create_trip(request: TripRequest):
-    daily_budget = calculate_daily_budget(
-        request.budget, request.days
-    )
-    category = get_trip_category(
-        request.budget
-    )
-    transportation = get_transportation_recommendation(category)
-    places = get_recommended_place(request.destination)
+    daily_budget   = calculate_daily_budget(request.budget, request.days)
+    category       = get_trip_category(request.budget)
     return {
-        "destination"                   : request.destination,
-        "budget"                        : request.budget,
-        "travel_style"                  : request.travel_style,
-        "daily_budget"                  : daily_budget,
-        "category"                      : category,
-        "transportation_recommendation" : transportation,
-        "recommended_places"            : places      
+        "destination"  : request.destination,
+        "budget"       : request.budget,
+        "travel_style" : request.travel_style,
+        "daily_budget" : daily_budget,
+        "category"     : category,
     }
 
+@app.post("/api/v1/transportations")
+def get_transportation(request: TripRequest):
+    category       = get_trip_category(request.budget)
+    transportation = get_transportation_recommendation(category)
+    return {"transportation_recommendation" : transportation}
 
+@app.post("/api/v1/recommendations")
+def get_recommendations(request: TripRequest):
+    places = get_recommended_place(request.destination)
+    return {"recommended_places" : places}
