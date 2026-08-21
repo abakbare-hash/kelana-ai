@@ -6,6 +6,7 @@ from services.trip_service import (
     get_transportation_recommendation,
     get_recommended_place,
 )
+from services.bedrock_service import get_ai_recommendation
 from models.trip import Trip
 from database import SessionLocal, init_db
 
@@ -24,15 +25,24 @@ def home():
 
 @app.post("/api/v1/trips")
 def create_trip(request: TripRequest):
-    daily_budget = calculate_daily_budget(request.budget, request.days)
-    category     = get_trip_category(request.budget)
-
-    trip = Trip(
+    daily_budget   = calculate_daily_budget(request.budget, request.days)
+    category       = get_trip_category(request.budget)
+    transportation = get_transportation_recommendation(category)
+    recommendation = get_ai_recommendation(
         destination  = request.destination,
         days         = request.days,
         budget       = request.budget,
-        category     = category,
-        daily_budget = daily_budget,
+        travel_style = request.travel_style,
+    )
+
+    trip = Trip(
+        destination       = request.destination,
+        days              = request.days,
+        budget            = request.budget,
+        category          = category,
+        daily_budget      = daily_budget,
+        transportation    = transportation,
+        ai_recommendation = recommendation,
     )
 
     db = SessionLocal()
@@ -58,6 +68,30 @@ def get_trip(trip_id: int):
         raise HTTPException(status_code=404, detail=f"Trip with id {trip_id} not found")
     return trip
 
+@app.put("/api/v1/trips/{trip_id}")
+def update_trip(trip_id: int, request: TripRequest):
+    db = SessionLocal()
+    trip = db.query(Trip).filter(Trip.id == trip_id).first()
+    if trip is None:
+        db.close()
+        raise HTTPException(status_code=404, detail=f"Trip with id {trip_id} not found")
+
+    daily_budget   = calculate_daily_budget(request.budget, request.days)
+    category       = get_trip_category(request.budget)
+    transportation = get_transportation_recommendation(category)
+
+    trip.destination    = request.destination
+    trip.days           = request.days
+    trip.budget         = request.budget
+    trip.daily_budget   = daily_budget
+    trip.category       = category
+    trip.transportation = transportation
+
+    db.commit()
+    db.refresh(trip)
+    db.close()
+    return trip
+
 @app.post("/api/v1/transportations")
 def get_transportation(request: TripRequest):
     category       = get_trip_category(request.budget)
@@ -68,3 +102,13 @@ def get_transportation(request: TripRequest):
 def get_recommendations(request: TripRequest):
     places = get_recommended_place(request.destination)
     return {"recommended_places" : places}
+
+@app.post("/api/v1/ai-recommendation")
+def ai_recommendation(request: TripRequest):
+    recommendation = get_ai_recommendation(
+        destination  = request.destination,
+        days         = request.days,
+        budget       = request.budget,
+        travel_style = request.travel_style,
+    )
+    return {"ai_recommendation": recommendation}

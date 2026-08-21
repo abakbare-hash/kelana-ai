@@ -7,7 +7,7 @@ import os
 load_dotenv()
 
 # connection string from .env — never hardcode secrets
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = os.getenv("DATABASE_URL", "").replace("postgresql://", "postgresql+psycopg://")
 
 # engine = the connection pool
 engine = create_engine(DATABASE_URL)
