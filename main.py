@@ -92,23 +92,20 @@ def update_trip(trip_id: int, request: TripRequest):
     db.close()
     return trip
 
-@app.post("/api/v1/transportations")
-def get_transportation(request: TripRequest):
-    category       = get_trip_category(request.budget)
-    transportation = get_transportation_recommendation(category)
-    return {"transportation_recommendation" : transportation}
+@app.delete("/api/v1/trips/{trip_id}")
+def delete_trip(trip_id: int):
+    db = SessionLocal()
+    trip = db.query(Trip).filter(Trip.id == trip_id).first()
+    if trip is None:
+        db.close()
+        raise HTTPException(status_code=404, detail=f"Trip with id {trip_id} not found")
+    db.delete(trip)
+    db.commit()
+    db.close()
+    return {"message": f"Trip with id {trip_id} deleted successfully"}
 
 @app.post("/api/v1/recommendations")
 def get_recommendations(request: TripRequest):
     places = get_recommended_place(request.destination)
     return {"recommended_places" : places}
 
-@app.post("/api/v1/ai-recommendation")
-def ai_recommendation(request: TripRequest):
-    recommendation = get_ai_recommendation(
-        destination  = request.destination,
-        days         = request.days,
-        budget       = request.budget,
-        travel_style = request.travel_style,
-    )
-    return {"ai_recommendation": recommendation}
