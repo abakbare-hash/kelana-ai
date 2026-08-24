@@ -28,14 +28,25 @@ def get_ai_recommendation(destination: str, days: int, budget: float, travel_sty
     model_id = os.getenv("MODEL_ID", "amazon.nova-lite-v1:0")
 
     prompt = (
-        f"You are an experienced travel planner. "
-        f"Plan a {days}-day itinerary for {destination}. "
-        f"Budget: USD {budget} "
+        f"You are an experienced travel planner who specializes in personalized trips.\n\n"
+        f"Plan a {days}-day itinerary for {destination}.\n"
+        f"Budget: USD {budget}\n"
         f"Travel Style: {travel_style}\n\n"
+        f"IMPORTANT: This trip is specifically designed for a '{travel_style}' traveler. "
+        f"You MUST tailor every recommendation to strictly match this travel style:\n"
+        f"- If the style is 'Family': focus on family-friendly attractions, kid-safe activities, "
+        f"comfortable accommodations, and avoid nightlife, bars, extreme sports, or adult-only venues.\n"
+        f"- If the style is 'Backpacker': focus on budget hostels, street food, public transport, "
+        f"and off-the-beaten-path experiences. Avoid luxury hotels or expensive restaurants.\n"
+        f"- If the style is 'Luxury': focus on 5-star hotels, fine dining, private tours, and "
+        f"premium experiences. Avoid budget options.\n"
+        f"- If the style is 'Adventure': focus on outdoor activities, hiking, extreme sports, and "
+        f"nature experiences. Avoid passive sightseeing.\n"
+        f"- For any other style, interpret it carefully and tailor all recommendations accordingly.\n\n"
         f"Please provide a detailed travel plan that includes:\n"
         f"1. A day-by-day itinerary for all {days} days\n"
         f"2. Estimated daily budget breakdown\n"
-        f"3. Local food recommendations\n"
+        f"3. Local food recommendations suited to a '{travel_style}' traveler\n"
         f"4. Transportation recommendations\n\n"
         f"Format the response as Markdown using:\n"
         f"- ## for section headers\n"
@@ -61,7 +72,7 @@ def get_ai_recommendation(destination: str, days: int, budget: float, travel_sty
             }
         ],
         "inferenceConfig": {
-            "maxTokens": 1024,
+            "maxTokens": 2048,
             "temperature": 0.7,
         },
     })
@@ -76,4 +87,10 @@ def get_ai_recommendation(destination: str, days: int, budget: float, travel_sty
     result = json.loads(response["body"].read())
 
     # extract text from Nova response structure
-    return result["output"]["message"]["content"][0]["text"]
+    text = result["output"]["message"]["content"][0]["text"]
+
+    # trim to 6000 characters to fit column limit without cutting mid-sentence
+    if len(text) > 6000:
+        text = text[:6000].rsplit(" ", 1)[0] + "..."
+
+    return text
