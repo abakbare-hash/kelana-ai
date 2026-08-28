@@ -31,9 +31,15 @@ function CreateTripTab() {
     setError("");
 
     try {
+      const stored = localStorage.getItem("user");
+      const user = stored ? JSON.parse(stored) : null;
+
       const response = await fetch("http://localhost:8000/api/v1/trips", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${user?.token}`,
+        },
         body: JSON.stringify({
           destination,
           days: parseInt(days),
@@ -140,7 +146,12 @@ function TripsTab() {
   const [sort, setSort] = useState<"latest" | "oldest" | "budget">("latest");
 
   useEffect(() => {
-    fetch("http://localhost:8000/api/v1/trips")
+    const stored = localStorage.getItem("user");
+    const user = stored ? JSON.parse(stored) : null;
+
+    fetch("http://localhost:8000/api/v1/trips", {
+      headers: { Authorization: `Bearer ${user?.token}` },
+    })
       .then((res) => {
         if (!res.ok) throw new Error(`Server error: ${res.status}`);
         return res.json();
@@ -236,18 +247,59 @@ function TripsTab() {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 function HomeContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<"create" | "trips">(
     searchParams.get("tab") === "trips" ? "trips" : "create"
   );
+  const [user, setUser] = useState<{ id: number; name: string; email: string } | null>(null);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("user");
+    if (!stored) {
+      router.push("/login");
+      return;
+    }
+    setUser(JSON.parse(stored));
+  }, [router]);
 
   useEffect(() => {
     setActiveTab(searchParams.get("tab") === "trips" ? "trips" : "create");
   }, [searchParams]);
 
+  function handleLogout() {
+    localStorage.removeItem("user");
+    router.push("/login");
+  }
+
   return (
     <main className="min-h-screen bg-gray-50 py-8 sm:py-12 px-4">
       <div className="max-w-2xl mx-auto w-full">
+
+        {/* Top bar: greeting + profile + logout */}
+        {user && (
+          <div className="flex justify-between items-center mb-4 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="text-gray-500">Hi, <span className="font-semibold text-gray-700">{user.name}</span></span>
+              <button
+                onClick={() => router.push("/profile")}
+                aria-label="My Profile"
+                title="My Profile"
+                className="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center hover:bg-green-600 hover:text-white transition"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                  <path fillRule="evenodd" d="M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-4.418 0-8 2.239-8 5v1h16v-1c0-2.761-3.582-5-8-5z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="text-xs font-semibold text-green-600 hover:text-green-700 border border-green-600 rounded-lg px-3 py-1 hover:bg-green-50 transition"
+            >
+              Logout
+            </button>
+          </div>
+        )}
 
         {/* Header */}
         <div className="text-center mb-6 sm:mb-8">

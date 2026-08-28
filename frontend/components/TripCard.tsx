@@ -29,7 +29,12 @@ export default function TripCard({ trip, onDeleted }: { trip: Trip; onDeleted?: 
   async function handleDelete() {
     setDeleting(true)
     try {
-      await fetch(`http://localhost:8000/api/v1/trips/${trip.id}`, { method: "DELETE" })
+      const stored = localStorage.getItem("user")
+      const user = stored ? JSON.parse(stored) : null
+      await fetch(`http://localhost:8000/api/v1/trips/${trip.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${user?.token}` },
+      })
       setShowConfirm(false)
       onDeleted?.(trip.id)
     } catch {

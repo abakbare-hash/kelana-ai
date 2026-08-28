@@ -66,7 +66,11 @@ export default function TripDetailPage() {
 
   useEffect(() => {
     if (!id) return;
-    fetch(`http://localhost:8000/api/v1/trips/${id}`)
+    const stored = localStorage.getItem("user");
+    const user = stored ? JSON.parse(stored) : null;
+    fetch(`http://localhost:8000/api/v1/trips/${id}`, {
+      headers: { Authorization: `Bearer ${user?.token}` },
+    })
       .then((res) => {
         if (!res.ok) throw new Error(`Trip not found (${res.status})`);
         return res.json();
