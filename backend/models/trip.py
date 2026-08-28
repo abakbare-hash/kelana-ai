@@ -18,6 +18,7 @@ class Trip(Base):
     transportation     = Column(String,     nullable=True)
     ai_recommendation  = Column(Text,       nullable=True)
     hero_image         = Column(String,     nullable=True)
+    country_code       = Column(String,     nullable=True)
     created_at          = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     user = relationship("User", back_populates="trips")

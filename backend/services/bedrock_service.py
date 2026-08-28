@@ -34,6 +34,7 @@ def get_ai_recommendation(destination: str, days: int, budget: float, travel_sty
         f"Travel Style: {travel_style}\n\n"
         f"IMPORTANT: This trip is specifically designed for a '{travel_style}' traveler. "
         f"You MUST tailor every recommendation to strictly match this travel style:\n"
+        f"You MUST give good closing statement, nice congratulation words to user"
         f"- If the style is 'Family': focus on family-friendly attractions, kid-safe activities, "
         f"comfortable accommodations, and avoid nightlife, bars, extreme sports, or adult-only venues.\n"
         f"- If the style is 'Backpacker': focus on budget hostels, street food, public transport, "
@@ -87,7 +88,7 @@ def get_ai_recommendation(destination: str, days: int, budget: float, travel_sty
             }
         ],
         "inferenceConfig": {
-            "maxTokens": 2048,
+            "maxTokens": 5000,
             "temperature": 0.7,
         },
     })
@@ -115,11 +116,56 @@ def get_ai_recommendation(destination: str, days: int, budget: float, travel_sty
     # Fetch hero image from Wikipedia (high quality, free, destination-relevant)
     hero_image = _get_wikipedia_image(landmark, destination)
 
-    # trim to 6000 characters to fit column limit without cutting mid-sentence
-    if len(text) > 6000:
-        text = text[:6000].rsplit(" ", 1)[0] + "..."
+    # Resolve the destination to an ISO country code via Wikipedia/Wikidata
+    country_code = _get_country_code(destination)
 
-    return {"text": text, "hero_image": hero_image}
+    return {"text": text, "hero_image": hero_image, "country_code": country_code}
+
+
+def _get_country_code(destination: str):
+    """
+    Resolve a destination (city or country) to an ISO 3166-1 alpha-2 code
+    using Wikipedia + Wikidata. Returns None if it can't be determined.
+    """
+    import urllib.request
+    import urllib.parse
+
+    def _fetch_json(url: str):
+        req = urllib.request.Request(url, headers={"User-Agent": "KelanaAI/1.0"})
+        with urllib.request.urlopen(req, timeout=6) as resp:
+            return json.loads(resp.read())
+
+    try:
+        # 1. Get the Wikidata entity id for the destination
+        title = urllib.parse.quote(destination.strip().replace(" ", "_"))
+        summary = _fetch_json(f"https://en.wikipedia.org/api/rest_v1/page/summary/{title}")
+        entity_id = summary.get("wikibase_item")
+        if not entity_id:
+            return None
+
+        # 2. Fetch the entity's claims from Wikidata
+        entity = _fetch_json(
+            f"https://www.wikidata.org/wiki/Special:EntityData/{entity_id}.json"
+        )
+        claims = entity["entities"][entity_id]["claims"]
+
+        # P297 = ISO 3166-1 alpha-2 code (present if the entity IS a country)
+        if "P297" in claims:
+            return claims["P297"][0]["mainsnak"]["datavalue"]["value"].upper()
+
+        # P17 = country (present if the entity is a city/place inside a country)
+        if "P17" in claims:
+            country_qid = claims["P17"][0]["mainsnak"]["datavalue"]["value"]["id"]
+            country = _fetch_json(
+                f"https://www.wikidata.org/wiki/Special:EntityData/{country_qid}.json"
+            )
+            country_claims = country["entities"][country_qid]["claims"]
+            if "P297" in country_claims:
+                return country_claims["P297"][0]["mainsnak"]["datavalue"]["value"].upper()
+    except Exception:
+        return None
+
+    return None
 
 
 def _get_wikipedia_image(landmark: str, fallback: str) -> str:

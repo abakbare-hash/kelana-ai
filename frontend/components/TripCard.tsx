@@ -11,6 +11,8 @@ interface Trip {
   category: string
   daily_budget: number
   transportation: string
+  travel_style?: string | null
+  country_code?: string | null
 }
 
 function categoryColor(category: string) {
@@ -19,6 +21,33 @@ function categoryColor(category: string) {
     case "backpacker": return "text-purple-500"
     default:           return "text-blue-500"
   }
+}
+
+// Build a flag image URL from an ISO 3166-1 alpha-2 code using flagcdn.com
+// (free, no API key). Flag emojis don't render on Windows, so we use images.
+function flagUrl(code?: string | null): string | null {
+  if (!code || code.length !== 2) return null
+  return `https://flagcdn.com/w80/${code.toLowerCase()}.png`
+}
+
+// Consistent color per travel style (same style always gets same badge color)
+const BADGE_COLORS = [
+  "bg-rose-100 text-rose-700",
+  "bg-amber-100 text-amber-700",
+  "bg-lime-100 text-lime-700",
+  "bg-emerald-100 text-emerald-700",
+  "bg-cyan-100 text-cyan-700",
+  "bg-indigo-100 text-indigo-700",
+  "bg-fuchsia-100 text-fuchsia-700",
+  "bg-teal-100 text-teal-700",
+]
+
+function styleBadgeColor(style: string): string {
+  let hash = 0
+  for (let i = 0; i < style.length; i++) {
+    hash = style.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  return BADGE_COLORS[Math.abs(hash) % BADGE_COLORS.length]
 }
 
 export default function TripCard({ trip, onDeleted }: { trip: Trip; onDeleted?: (id: number) => void }) {
@@ -47,6 +76,24 @@ export default function TripCard({ trip, onDeleted }: { trip: Trip; onDeleted?: 
       {/* Card */}
       <div className="bg-white rounded-lg shadow border border-transparent hover:border-green-400 hover:bg-green-50 transition-all duration-150 p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center gap-3">
 
+        {/* Flag icon */}
+        <div className="shrink-0 flex items-center justify-center w-11 h-8 sm:w-12 sm:h-9 rounded overflow-hidden bg-gray-100">
+          {flagUrl(trip.country_code) ? (
+            <img
+              src={flagUrl(trip.country_code)!}
+              alt={`${trip.destination} flag`}
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                const el = e.target as HTMLImageElement
+                el.style.display = "none"
+                el.parentElement!.textContent = "🌍"
+              }}
+            />
+          ) : (
+            <span className="text-xl">🌍</span>
+          )}
+        </div>
+
         {/* Info */}
         <div className="flex flex-col flex-1 min-w-0">
           {/* Destination + Category on same row */}
@@ -56,8 +103,13 @@ export default function TripCard({ trip, onDeleted }: { trip: Trip; onDeleted?: 
               {trip.category}
             </span>
           </div>
-          {/* Days + Budget below */}
-          <div className="flex gap-3 text-xs text-gray-500 mt-0.5">
+          {/* Travel style badge + Days + Budget below */}
+          <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
+            {trip.travel_style && (
+              <span className={`px-2 py-0.5 rounded-full font-semibold ${styleBadgeColor(trip.travel_style)}`}>
+                {trip.travel_style}
+              </span>
+            )}
             <span>{trip.days} Days</span>
             <span>USD {trip.budget}</span>
           </div>

@@ -144,6 +144,8 @@ function TripsTab() {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<"latest" | "oldest" | "budget">("latest");
+  const [perPage, setPerPage] = useState(5);
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     const stored = localStorage.getItem("user");
@@ -172,6 +174,17 @@ function TripsTab() {
       if (sort === "budget")  return b.budget - a.budget;
       return 0;
     });
+
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
+  const currentPage = Math.min(page, totalPages);
+  const startIdx = (currentPage - 1) * perPage;
+  const paginated = filtered.slice(startIdx, startIdx + perPage);
+
+  // Reset to page 1 whenever search, sort, or perPage changes
+  useEffect(() => {
+    setPage(1);
+  }, [search, sort, perPage]);
 
   if (loading) {
     return (
@@ -234,11 +247,50 @@ function TripsTab() {
           No trips match your search.
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-3">
-          {filtered.map((t) => (
-            <TripCard key={t.id} trip={t} onDeleted={(id) => setTrips((prev) => prev.filter((t) => t.id !== id))} />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 gap-3">
+            {(filtered.length > 10 ? paginated : filtered).map((t) => (
+              <TripCard key={t.id} trip={t} onDeleted={(id) => setTrips((prev) => prev.filter((t) => t.id !== id))} />
+            ))}
+          </div>
+
+          {/* Pagination controls — only when more than 10 trips */}
+          {filtered.length > 10 && (
+          <div className="flex items-center justify-between mt-5">
+            <span className="text-xs text-gray-400">
+              Showing {startIdx + 1}–{Math.min(startIdx + perPage, filtered.length)} of {filtered.length}
+            </span>
+            <div className="flex items-center gap-2">
+              <select
+                value={perPage}
+                onChange={(e) => setPerPage(Number(e.target.value))}
+                className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-green-500 bg-white text-gray-700"
+              >
+                <option value={5}>5 / page</option>
+                <option value={10}>10 / page</option>
+                <option value={20}>20 / page</option>
+              </select>
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 text-xs font-semibold rounded-lg border-2 border-green-600 text-green-600 hover:bg-green-600 hover:text-white active:scale-95 transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-green-600"
+              >
+                Prev
+              </button>
+              <span className="text-xs font-semibold text-gray-600">
+                {currentPage} / {totalPages}
+              </span>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1.5 text-xs font-semibold rounded-lg border-2 border-green-600 text-green-600 hover:bg-green-600 hover:text-white active:scale-95 transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-green-600"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+          )}
+        </>
       )}
     </div>
   );

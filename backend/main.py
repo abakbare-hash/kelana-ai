@@ -158,6 +158,7 @@ def create_trip(request: TripRequest, user: User = Depends(get_current_user)):
     )
     recommendation = result["text"]
     hero_image     = result["hero_image"]
+    country_code   = result.get("country_code")
 
     trip = Trip(
         user_id           = user.id,
@@ -170,6 +171,7 @@ def create_trip(request: TripRequest, user: User = Depends(get_current_user)):
         transportation    = transportation,
         ai_recommendation = recommendation,
         hero_image        = hero_image,
+        country_code      = country_code,
     )
 
     db = SessionLocal()
