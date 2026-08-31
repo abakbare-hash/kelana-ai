@@ -18,7 +18,7 @@ interface TripResult {
 
 const LOADING_MESSAGES = [
   "Generating itinerary...",
-  "Please wait while Amazon Nova Lite does its best for you ✨",
+  "Please wait while KelanaAI does its best for you ✨",
   "Researching the best spots for your trip...",
   "Calculating your daily budget breakdown...",
   "Finding local food recommendations...",

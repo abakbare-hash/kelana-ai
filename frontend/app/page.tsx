@@ -338,6 +338,12 @@ function HomeContent() {
             <div className="flex items-center gap-2">
               <span className="text-gray-500">Hi, <span className="font-semibold text-gray-700">{user.name}</span></span>
               <button
+                onClick={() => router.push("/ask")}
+                className="text-xs font-semibold text-green-600 border border-green-600 rounded-lg px-3 py-1 hover:bg-green-600 hover:text-white active:scale-95 transition-all duration-150"
+              >
+                Ask KelanaAI
+              </button>
+              <button
                 onClick={() => router.push("/profile")}
                 aria-label="My Profile"
                 title="My Profile"
