@@ -68,10 +68,19 @@ export default function TripDetailPage() {
     if (!id) return;
     const stored = localStorage.getItem("user");
     const user = stored ? JSON.parse(stored) : null;
+
+    // not logged in — send to login
+    if (!user?.token) {
+      router.push("/login");
+      return;
+    }
+
     fetch(`http://localhost:8000/api/v1/trips/${id}`, {
       headers: { Authorization: `Bearer ${user?.token}` },
     })
       .then((res) => {
+        if (res.status === 403) throw new Error("Forbidden: You do not have permission to view this trip");
+        if (res.status === 401) throw new Error("Unauthorized: Please log in to view this trip");
         if (!res.ok) throw new Error(`Trip not found (${res.status})`);
         return res.json();
       })

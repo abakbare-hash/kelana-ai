@@ -144,7 +144,7 @@ function TripsTab() {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<"latest" | "oldest" | "budget">("latest");
-  const [perPage, setPerPage] = useState(5);
+  const [perPage, setPerPage] = useState(10);
   const [page, setPage] = useState(1);
 
   useEffect(() => {
@@ -250,7 +250,12 @@ function TripsTab() {
         <>
           <div className="grid grid-cols-1 gap-3">
             {(filtered.length > 10 ? paginated : filtered).map((t) => (
-              <TripCard key={t.id} trip={t} onDeleted={(id) => setTrips((prev) => prev.filter((t) => t.id !== id))} />
+              <TripCard
+                key={t.id}
+                trip={t}
+                onDeleted={(id) => setTrips((prev) => prev.filter((t) => t.id !== id))}
+                onUpdated={(updated) => setTrips((prev) => prev.map((t) => (t.id === updated.id ? { ...t, ...updated } : t)))}
+              />
             ))}
           </div>
 
@@ -266,7 +271,6 @@ function TripsTab() {
                 onChange={(e) => setPerPage(Number(e.target.value))}
                 className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-green-500 bg-white text-gray-700"
               >
-                <option value={5}>5 / page</option>
                 <option value={10}>10 / page</option>
                 <option value={20}>20 / page</option>
               </select>

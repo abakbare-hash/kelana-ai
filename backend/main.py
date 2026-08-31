@@ -188,33 +188,45 @@ def list_trips(user: User = Depends(get_current_user)):
     db.close()
     return trips
 
-@app.get("/api/v1/trips/{trip_id}")
-def get_trip(trip_id: int, user: User = Depends(get_current_user)):
-    db = SessionLocal()
-    trip = db.query(Trip).filter(Trip.id == trip_id, Trip.user_id == user.id).first()
-    db.close()
-    if trip is None:
-        raise HTTPException(status_code=404, detail=f"Trip with id {trip_id} not found")
-    return trip
+def _get_owned_trip(db, trip_id: int, user: User) -> Trip:
+    """
+    Fetch a trip and enforce ownership.
 
-@app.put("/api/v1/trips/{trip_id}")
-def update_trip(trip_id: int, request: TripRequest):
-    db = SessionLocal()
+    Raises 404 if the trip does not exist, or 403 if it belongs to another user.
+    """
     trip = db.query(Trip).filter(Trip.id == trip_id).first()
     if trip is None:
         db.close()
         raise HTTPException(status_code=404, detail=f"Trip with id {trip_id} not found")
+    if trip.user_id != user.id:
+        db.close()
+        raise HTTPException(status_code=403, detail="You do not have permission to access this trip")
+    return trip
 
-    daily_budget   = calculate_daily_budget(request.budget, request.days)
-    category       = get_trip_category(request.budget)
-    transportation = get_transportation_recommendation(category)
+@app.get("/api/v1/trips/{trip_id}")
+def get_trip(trip_id: int, user: User = Depends(get_current_user)):
+    db = SessionLocal()
+    trip = _get_owned_trip(db, trip_id, user)
+    db.close()
+    return trip
 
-    trip.destination    = request.destination
-    trip.days           = request.days
-    trip.budget         = request.budget
-    trip.daily_budget   = daily_budget
-    trip.category       = category
-    trip.transportation = transportation
+@app.put("/api/v1/trips/{trip_id}")
+def update_trip(trip_id: int, request: TripUpdateRequest, user: User = Depends(get_current_user)):
+    db = SessionLocal()
+    trip = _get_owned_trip(db, trip_id, user)
+
+    # apply only the fields the user provided
+    if request.budget is not None:
+        trip.budget = request.budget
+    if request.days is not None:
+        trip.days = request.days
+    if request.travel_style is not None:
+        trip.travel_style = request.travel_style
+
+    # recalculate derived fields from the updated values
+    trip.daily_budget   = calculate_daily_budget(trip.budget, trip.days)
+    trip.category       = get_trip_category(trip.budget)
+    trip.transportation = get_transportation_recommendation(trip.category)
 
     db.commit()
     db.refresh(trip)
@@ -224,22 +236,16 @@ def update_trip(trip_id: int, request: TripRequest):
 @app.delete("/api/v1/trips/{trip_id}")
 def delete_trip(trip_id: int, user: User = Depends(get_current_user)):
     db = SessionLocal()
-    trip = db.query(Trip).filter(Trip.id == trip_id, Trip.user_id == user.id).first()
-    if trip is None:
-        db.close()
-        raise HTTPException(status_code=404, detail=f"Trip with id {trip_id} not found")
+    trip = _get_owned_trip(db, trip_id, user)
     db.delete(trip)
     db.commit()
     db.close()
     return {"message": f"Trip with id {trip_id} deleted successfully"}
 
 @app.post("/api/v1/trips/{trip_id}/generate")
-def generate_recommendation(trip_id: int):
+def generate_recommendation(trip_id: int, user: User = Depends(get_current_user)):
     db = SessionLocal()
-    trip = db.query(Trip).filter(Trip.id == trip_id).first()
-    if trip is None:
-        db.close()
-        raise HTTPException(status_code=404, detail=f"Trip with id {trip_id} not found")
+    trip = _get_owned_trip(db, trip_id, user)
 
     result         = get_ai_recommendation(
         destination  = trip.destination,
