@@ -344,6 +344,12 @@ function HomeContent() {
                 Ask KelanaAI
               </button>
               <button
+                onClick={() => router.push("/chat")}
+                className="text-xs font-semibold text-green-600 border border-green-600 rounded-lg px-3 py-1 hover:bg-green-600 hover:text-white active:scale-95 transition-all duration-150"
+              >
+                Chat
+              </button>
+              <button
                 onClick={() => router.push("/profile")}
                 aria-label="My Profile"
                 title="My Profile"

@@ -12,9 +12,13 @@ from services.trip_service import (
     get_recommended_place,
 )
 from services.bedrock_service import get_ai_recommendation
+from services.kb_service import ask_knowledge_base
+from services.kb_service import retrieve_and_generate
 from services.auth_service import register_user, login_user, create_access_token, get_current_user, change_password
+from services.chat_service import generate_chat_reply, make_title
 from models.trip import Trip
 from models.user import User
+from models.conversation import Conversation, Message
 from database import SessionLocal, init_db
 
 load_dotenv()
@@ -56,6 +60,18 @@ class LoginRequest(BaseModel):
 class ChangePasswordRequest(BaseModel):
     current_password: str
     new_password:     str
+
+class AskRequest(BaseModel):
+    question: str
+
+class ConversationCreateRequest(BaseModel):
+    title: Optional[str] = None
+
+class MessageCreateRequest(BaseModel):
+    content: str
+
+class ConversationRenameRequest(BaseModel):
+    title: str
 
 app = FastAPI()
 
@@ -121,6 +137,20 @@ def me(user: User = Depends(get_current_user)):
         "name":       user.name,
         "email":      user.email,
         "created_at": user.created_at,
+    }
+
+@app.post("/api/v1/ask")
+def ask(request: AskRequest):
+    try:
+        result = ask_knowledge_base(request.question)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Knowledge base error: {e}")
+    return {
+        "question": request.question,
+        "answer":   result["text"],
+        "source":   result["sources"],
     }
 
 # POST endpoint — change the logged-in user's password
@@ -265,3 +295,144 @@ def generate_recommendation(trip_id: int, user: User = Depends(get_current_user)
         "ai_recommendation" : trip.ai_recommendation,
     }
 
+
+# ─── Conversation / Chat endpoints ───────────────────────────────────────────
+
+def _get_owned_conversation(db, conversation_id: int, user: User) -> Conversation:
+    """Fetch a conversation, enforcing ownership (404 if missing, 403 if not owner)."""
+    convo = db.query(Conversation).filter(Conversation.id == conversation_id).first()
+    if convo is None:
+        db.close()
+        raise HTTPException(status_code=404, detail=f"Conversation {conversation_id} not found")
+    if convo.user_id != user.id:
+        db.close()
+        raise HTTPException(status_code=403, detail="You do not have permission to access this conversation")
+    return convo
+
+
+def _serialize_message(m: Message) -> dict:
+    return {
+        "id":         m.id,
+        "role":       m.role,
+        "content":    m.content,
+        "created_at": m.created_at,
+    }
+
+
+def _serialize_conversation(c: Conversation, include_messages: bool = False) -> dict:
+    data = {
+        "id":         c.id,
+        "title":      c.title,
+        "created_at": c.created_at,
+        "updated_at": c.updated_at,
+    }
+    if include_messages:
+        data["messages"] = [_serialize_message(m) for m in c.messages]
+    return data
+
+
+@app.post("/api/v1/conversations", status_code=201)
+def create_conversation(request: ConversationCreateRequest, user: User = Depends(get_current_user)):
+    db = SessionLocal()
+    try:
+        convo = Conversation(user_id=user.id, title=request.title or "New Conversation")
+        db.add(convo)
+        db.commit()
+        db.refresh(convo)
+        return _serialize_conversation(convo, include_messages=True)
+    finally:
+        db.close()
+
+
+@app.get("/api/v1/conversations")
+def list_conversations(user: User = Depends(get_current_user)):
+    db = SessionLocal()
+    try:
+        convos = (
+            db.query(Conversation)
+            .filter(Conversation.user_id == user.id)
+            .order_by(Conversation.updated_at.desc())
+            .all()
+        )
+        return [_serialize_conversation(c) for c in convos]
+    finally:
+        db.close()
+
+
+@app.get("/api/v1/conversations/{conversation_id}")
+def get_conversation(conversation_id: int, user: User = Depends(get_current_user)):
+    db = SessionLocal()
+    try:
+        convo = _get_owned_conversation(db, conversation_id, user)
+        return _serialize_conversation(convo, include_messages=True)
+    finally:
+        db.close()
+
+
+@app.post("/api/v1/conversations/{conversation_id}/messages")
+def post_message(conversation_id: int, request: MessageCreateRequest, user: User = Depends(get_current_user)):
+    db = SessionLocal()
+    try:
+        convo = _get_owned_conversation(db, conversation_id, user)
+
+        # 1 & 2. Receive and save the user's message
+        user_msg = Message(conversation_id=convo.id, role="user", content=request.content)
+        db.add(user_msg)
+
+        # If this is the first message, use it as the conversation title
+        if not convo.messages:
+            convo.title = make_title(request.content)
+
+        db.commit()
+        db.refresh(convo)
+
+        # 3. Load previous messages (full history, ordered) to build context
+        history = [{"role": m.role, "content": m.content} for m in convo.messages]
+
+        # 4 & 5. Build the context-aware prompt and call Bedrock
+        reply_text = generate_chat_reply(history)
+
+        # 6. Save the AI response
+        ai_msg = Message(conversation_id=convo.id, role="assistant", content=reply_text)
+        db.add(ai_msg)
+        db.commit()
+        db.refresh(ai_msg)
+        db.refresh(convo)
+
+        # Return the reply along with the updated conversation
+        return {
+            "conversation_id": convo.id,
+            "title":           convo.title,
+            "message":         _serialize_message(ai_msg),
+            "messages":        [_serialize_message(m) for m in convo.messages],
+        }
+    finally:
+        db.close()
+
+
+@app.patch("/api/v1/conversations/{conversation_id}")
+def rename_conversation(conversation_id: int, request: ConversationRenameRequest, user: User = Depends(get_current_user)):
+    db = SessionLocal()
+    try:
+        convo = _get_owned_conversation(db, conversation_id, user)
+        title = request.title.strip()
+        if not title:
+            raise HTTPException(status_code=400, detail="Title cannot be empty")
+        convo.title = title[:255]
+        db.commit()
+        db.refresh(convo)
+        return _serialize_conversation(convo)
+    finally:
+        db.close()
+
+
+@app.delete("/api/v1/conversations/{conversation_id}")
+def delete_conversation(conversation_id: int, user: User = Depends(get_current_user)):
+    db = SessionLocal()
+    try:
+        convo = _get_owned_conversation(db, conversation_id, user)
+        db.delete(convo)
+        db.commit()
+        return {"message": f"Conversation {conversation_id} deleted successfully"}
+    finally:
+        db.close()
