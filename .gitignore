@@ -1,6 +1,6 @@
-# Environment (all .env variants)
+# Environment (all .env variants, with or without a dot separator)
 .env
-.env.*
+.env*
 
 # Python
 .venv/
