@@ -1,15 +1,26 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
 [project]
-name = "kelana-ai-backend"
-version = "0.1.0"
+name = "kelana-ai"
+version = "1.0.0"
 description = "KelanaAI backend - AI-powered trip planning API"
-requires-python = ">=3.10"
+requires-python = ">=3.12,<3.14"
+
 dependencies = [
     "fastapi==0.115.6",
+    "fastapi-cli==0.0.7",
     "uvicorn==0.32.1",
     "sqlalchemy==2.0.36",
-    "psycopg[binary]==3.3.3",
+    "psycopg[binary]==3.2.4",
+    "pydantic==2.10.6",
     "python-dotenv==1.0.0",
     "boto3==1.43.56",
     "bcrypt==4.2.1",
     "PyJWT==2.10.1",
 ]
+
+[tool.setuptools.packages.find]
+include = ["models", "services"]
+exclude = ["session*", "tests*"]
