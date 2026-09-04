@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import TopBar from "@/components/TopBar";
 
 interface User {
   id: number;
@@ -15,6 +16,11 @@ export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [tripCount, setTripCount] = useState<number | null>(null);
+
+  function handleLogout() {
+    localStorage.removeItem("user");
+    router.push("/login");
+  }
 
   useEffect(() => {
     const stored = localStorage.getItem("user");
@@ -37,6 +43,7 @@ export default function ProfilePage() {
 
   return (
     <main className="min-h-screen bg-gray-50 py-8 sm:py-12 px-4">
+      <TopBar />
       <div className="max-w-md mx-auto w-full">
 
         {/* Header */}
@@ -80,6 +87,14 @@ export default function ProfilePage() {
             className="w-full py-2.5 text-sm font-semibold rounded-lg border-2 border-green-600 text-green-600 hover:bg-green-600 hover:text-white active:scale-95 transition-all duration-150"
           >
             Change Password
+          </button>
+
+          {/* Logout */}
+          <button
+            onClick={handleLogout}
+            className="w-full py-2.5 text-sm font-semibold rounded-lg border-2 border-red-400 text-red-500 hover:bg-red-400 hover:text-white active:scale-95 transition-all duration-150"
+          >
+            Logout
           </button>
         </div>
 

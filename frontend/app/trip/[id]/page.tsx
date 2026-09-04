@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
+import TopBar from "@/components/TopBar";
 
 interface TripResult {
   id: number;
@@ -107,6 +108,7 @@ export default function TripDetailPage() {
 
   return (
     <main className="min-h-screen bg-gray-50 py-8 sm:py-12 px-4">
+      <TopBar />
       <div className="max-w-3xl mx-auto">
 
         {/* Hero Image */}

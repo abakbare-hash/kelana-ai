@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
+import TopBar from "@/components/TopBar";
 
 const API = "http://localhost:8000/api/v1";
 
@@ -63,11 +64,17 @@ export default function ChatPage() {
     }
     fetch(`${API}/conversations/${activeId}`, { headers: authHeaders() })
       .then((r) => (r.ok ? r.json() : null))
-      .then((data) => setMessages(data?.messages ?? []))
+      .then((data) => {
+        setMessages(data?.messages ?? []);
+        // jump straight to the latest message when a conversation is opened
+        requestAnimationFrame(() => {
+          bottomRef.current?.scrollIntoView({ behavior: "auto" });
+        });
+      })
       .catch(() => setMessages([]));
   }, [activeId]);
 
-  // auto scroll to newest message
+  // smooth auto scroll to newest message as chat updates
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, sending]);
@@ -117,6 +124,9 @@ export default function ChatPage() {
     setInput("");
     setSending(true);
 
+    // ensure the processing animation shows for at least 3 seconds
+    const minDelay = new Promise((resolve) => setTimeout(resolve, 3000));
+
     try {
       const res = await fetch(`${API}/conversations/${convoId}/messages`, {
         method: "POST",
@@ -125,6 +135,9 @@ export default function ChatPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Failed to send");
+
+      // wait out the remainder of the minimum animation time
+      await minDelay;
 
       // replace with the authoritative message list from the server
       setMessages(data.messages ?? []);
@@ -139,6 +152,7 @@ export default function ChatPage() {
         return active ? [active, ...rest] : updated;
       });
     } catch {
+      await minDelay;
       setMessages((prev) => [
         ...prev,
         {
@@ -198,18 +212,26 @@ export default function ChatPage() {
     }
   }
 
+  function formatMessageTime(iso: string) {
+    try {
+      const d = new Date(iso);
+      const today = new Date();
+      const sameDay = d.toDateString() === today.toDateString();
+      return sameDay
+        ? d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+        : d.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+    } catch {
+      return "";
+    }
+  }
+
   return (
     <main className="min-h-screen bg-gray-50 py-6 px-4">
+      <TopBar />
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-2xl sm:text-3xl font-bold text-green-600">Chat with KelanaAI</h1>
-          <button
-            onClick={() => router.push("/")}
-            className="text-sm font-semibold text-green-600 hover:text-green-700 transition"
-          >
-            ← Home
-          </button>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 h-[70vh]">
@@ -293,28 +315,35 @@ export default function ChatPage() {
                 messages.map((m) => (
                   <div
                     key={m.id}
-                    className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+                    className={`flex flex-col ${m.role === "user" ? "items-end" : "items-start"}`}
                   >
                     {m.role === "user" ? (
-                      <div className="max-w-[80%] rounded-2xl rounded-br-sm px-4 py-2 text-sm whitespace-pre-wrap leading-relaxed bg-green-600 text-white">
+                      <div className="max-w-[80%] rounded-2xl rounded-br-sm px-4 py-2 text-sm whitespace-pre-wrap leading-relaxed bg-red-100 text-gray-800">
                         {m.content}
+                        <span className="block text-[10px] text-gray-500 mt-1 text-right">
+                          {formatMessageTime(m.created_at)}
+                        </span>
                       </div>
                     ) : (
-                      <div className="max-w-[85%] rounded-2xl rounded-bl-sm px-4 py-2 bg-gray-100 text-gray-800
-                        prose prose-sm max-w-none
-                        prose-headings:text-green-700
-                        prose-h1:text-lg prose-h1:font-bold prose-h1:mt-3 prose-h1:mb-1
-                        prose-h2:text-base prose-h2:font-bold prose-h2:mt-3 prose-h2:mb-1
-                        prose-h3:text-sm prose-h3:font-semibold prose-h3:mt-2 prose-h3:mb-1
-                        prose-h4:text-sm prose-h4:font-semibold prose-h4:mt-2 prose-h4:mb-1
-                        prose-p:my-1 prose-p:leading-relaxed
-                        prose-ul:list-disc prose-ul:pl-5 prose-ul:my-1
-                        prose-ol:list-decimal prose-ol:pl-5 prose-ol:my-1
-                        prose-li:my-0.5
-                        prose-strong:text-gray-900
-                        prose-a:text-green-600
-                      ">
-                        <ReactMarkdown>{m.content}</ReactMarkdown>
+                      <div className="max-w-[85%] rounded-2xl rounded-bl-sm px-4 py-2 bg-green-100 text-gray-800">
+                        <div className="prose prose-sm max-w-none
+                          prose-headings:text-green-700
+                          prose-h1:text-lg prose-h1:font-bold prose-h1:mt-3 prose-h1:mb-1
+                          prose-h2:text-base prose-h2:font-bold prose-h2:mt-3 prose-h2:mb-1
+                          prose-h3:text-sm prose-h3:font-semibold prose-h3:mt-2 prose-h3:mb-1
+                          prose-h4:text-sm prose-h4:font-semibold prose-h4:mt-2 prose-h4:mb-1
+                          prose-p:my-1 prose-p:leading-relaxed
+                          prose-ul:list-disc prose-ul:pl-5 prose-ul:my-1
+                          prose-ol:list-decimal prose-ol:pl-5 prose-ol:my-1
+                          prose-li:my-0.5
+                          prose-strong:text-gray-900
+                          prose-a:text-green-700
+                        ">
+                          <ReactMarkdown>{m.content}</ReactMarkdown>
+                        </div>
+                        <span className="block text-[10px] text-gray-500 mt-1">
+                          {formatMessageTime(m.created_at)}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -323,8 +352,9 @@ export default function ChatPage() {
 
               {sending && (
                 <div className="flex justify-start">
-                  <div className="bg-gray-100 text-gray-500 rounded-2xl rounded-bl-sm px-4 py-2 text-sm">
-                    <span className="inline-flex gap-1">
+                  <div className="bg-green-100 text-gray-600 rounded-2xl rounded-bl-sm px-4 py-2 text-sm flex items-center gap-2">
+                    <span className="italic">KelanaAI is processing the answer</span>
+                    <span className="inline-flex gap-0.5">
                       <span className="animate-bounce">.</span>
                       <span className="animate-bounce [animation-delay:0.15s]">.</span>
                       <span className="animate-bounce [animation-delay:0.3s]">.</span>

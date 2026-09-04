@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import TopBar from "@/components/TopBar";
 
 interface Source {
   document_id: string;
@@ -61,6 +62,7 @@ export default function AskPage() {
 
   return (
     <main className="min-h-screen bg-gray-50 py-8 sm:py-12 px-4">
+      <TopBar />
       <div className="max-w-2xl mx-auto w-full">
 
         {/* Header */}
