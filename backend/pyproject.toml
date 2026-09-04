@@ -1,0 +1,15 @@
+[project]
+name = "kelana-ai-backend"
+version = "0.1.0"
+description = "KelanaAI backend - AI-powered trip planning API"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi==0.115.6",
+    "uvicorn==0.32.1",
+    "sqlalchemy==2.0.36",
+    "psycopg[binary]==3.3.3",
+    "python-dotenv==1.0.0",
+    "boto3==1.43.56",
+    "bcrypt==4.2.1",
+    "PyJWT==2.10.1",
+]
