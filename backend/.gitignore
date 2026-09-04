@@ -1,6 +1,6 @@
+# Environment (all .env variants)
 .env
-.env.local
-.env.*.local
+.env.*
 .python-version
 .venv/
 __pycache__/

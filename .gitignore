@@ -1,1 +1,15 @@
+# Environment (all .env variants)
 .env
+.env.*
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Node / Next.js
+node_modules/
+.next/
+
+# OS
+.DS_Store
