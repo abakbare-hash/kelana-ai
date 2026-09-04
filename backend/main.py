@@ -3,6 +3,7 @@ from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
+import logging
 from typing import Optional
 from pydantic import BaseModel, field_validator
 from services.trip_service import (
@@ -73,21 +74,39 @@ class MessageCreateRequest(BaseModel):
 class ConversationRenameRequest(BaseModel):
     title: str
 
+logger = logging.getLogger(__name__)
+
 app = FastAPI()
+
+# Allow the local dev frontend plus any configured/production origins.
+allowed_origins = [
+    o.strip() for o in os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",") if o.strip()
+]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=allowed_origins,
+    allow_origin_regex=r"^(http://(localhost|127\.0\.0\.1):\d+|https://.*\.vercel\.app)$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-init_db()
+@app.on_event("startup")
+def _startup() -> None:
+    """Initialize the database on startup, logging (not crashing) on failure."""
+    try:
+        init_db()
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Database initialization failed at startup: %s", exc)
 
 @app.get("/")
 def home():
     return {"message" : "Hurray to KelanaAI"}
+
+@app.get("/health")
+def health_check():
+    return {"status": "OK"}
 
 # POST endpoint — register a new user
 @app.post("/api/v1/auth/register", status_code=201)
