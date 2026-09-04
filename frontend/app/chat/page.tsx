@@ -4,8 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import TopBar from "@/components/TopBar";
-
-const API = "http://localhost:8000/api/v1";
+import { API_URL as API } from "@/lib/api";
 
 interface Conversation {
   id: number;

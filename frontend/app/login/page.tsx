@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { API_URL } from "@/lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -26,8 +27,8 @@ export default function LoginPage() {
 
     const endpoint =
       mode === "login"
-        ? "http://localhost:8000/api/v1/auth/login"
-        : "http://localhost:8000/api/v1/auth/register";
+        ? `${API_URL}/auth/login`
+        : `${API_URL}/auth/register`;
 
     const body =
       mode === "login"

@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import TripCard from "@/components/TripCard";
 import TopBar from "@/components/TopBar";
+import { API_URL } from "@/lib/api";
 
 interface Trip {
   id: number;
@@ -35,7 +36,7 @@ function CreateTripTab() {
       const stored = localStorage.getItem("user");
       const user = stored ? JSON.parse(stored) : null;
 
-      const response = await fetch("http://localhost:8000/api/v1/trips", {
+      const response = await fetch(`${API_URL}/trips`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -152,7 +153,7 @@ function TripsTab() {
     const stored = localStorage.getItem("user");
     const user = stored ? JSON.parse(stored) : null;
 
-    fetch("http://localhost:8000/api/v1/trips", {
+    fetch(`${API_URL}/trips`, {
       headers: { Authorization: `Bearer ${user?.token}` },
     })
       .then((res) => {

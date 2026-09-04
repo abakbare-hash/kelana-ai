@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import TopBar from "@/components/TopBar";
+import { API_URL } from "@/lib/api";
 
 interface Source {
   document_id: string;
@@ -39,7 +40,7 @@ export default function AskPage() {
       const stored = localStorage.getItem("user");
       const user = stored ? JSON.parse(stored) : null;
 
-      const res = await fetch("http://localhost:8000/api/v1/ask", {
+      const res = await fetch(`${API_URL}/ask`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

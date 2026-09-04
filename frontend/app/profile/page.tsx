@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import TopBar from "@/components/TopBar";
+import { API_URL } from "@/lib/api";
 
 interface User {
   id: number;
@@ -31,7 +32,7 @@ export default function ProfilePage() {
     const u: User = JSON.parse(stored);
     setUser(u);
 
-    fetch("http://localhost:8000/api/v1/trips", {
+    fetch(`${API_URL}/trips`, {
       headers: { Authorization: `Bearer ${u.token}` },
     })
       .then((res) => (res.ok ? res.json() : []))
@@ -134,7 +135,7 @@ function ChangePasswordModal({ token, onClose }: { token: string; onClose: () =>
 
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:8000/api/v1/auth/change-password", {
+      const res = await fetch(`${API_URL}/auth/change-password`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

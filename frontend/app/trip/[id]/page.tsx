@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import TopBar from "@/components/TopBar";
+import { API_URL } from "@/lib/api";
 
 interface TripResult {
   id: number;
@@ -76,7 +77,7 @@ export default function TripDetailPage() {
       return;
     }
 
-    fetch(`http://localhost:8000/api/v1/trips/${id}`, {
+    fetch(`${API_URL}/trips/${id}`, {
       headers: { Authorization: `Bearer ${user?.token}` },
     })
       .then((res) => {

@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { API_URL } from "@/lib/api"
 
 interface Trip {
   id: number
@@ -80,7 +81,7 @@ export default function TripCard({
     setDeleting(true)
     try {
       const user = getStoredUser()
-      await fetch(`http://localhost:8000/api/v1/trips/${trip.id}`, {
+      await fetch(`${API_URL}/trips/${trip.id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${user?.token}` },
       })
@@ -235,7 +236,7 @@ function EditTripModal({
     setError("")
     try {
       const user = getStoredUser()
-      const res = await fetch(`http://localhost:8000/api/v1/trips/${trip.id}`, {
+      const res = await fetch(`${API_URL}/trips/${trip.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
