@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import TopBar from "@/components/TopBar";
+import ReactMarkdown from "react-markdown";
 import { API_URL } from "@/lib/api";
 
 interface Source {
@@ -115,7 +116,21 @@ export default function AskPage() {
         {answer && !loading && (
           <div className="mt-6 bg-white rounded-2xl shadow p-5 sm:p-6">
             <h2 className="text-green-600 font-bold text-sm mb-3">Answer</h2>
-            <p className="text-gray-700 text-sm whitespace-pre-wrap leading-relaxed">{answer}</p>
+            <div className="prose prose-sm max-w-none text-gray-700
+              prose-headings:text-green-700
+              prose-h1:text-lg prose-h1:font-bold prose-h1:mt-3 prose-h1:mb-1
+              prose-h2:text-base prose-h2:font-bold prose-h2:mt-3 prose-h2:mb-1
+              prose-h3:text-sm prose-h3:font-semibold prose-h3:mt-2 prose-h3:mb-1
+              prose-h4:text-sm prose-h4:font-semibold prose-h4:mt-2 prose-h4:mb-1
+              prose-p:my-1 prose-p:leading-relaxed
+              prose-ul:list-disc prose-ul:pl-5 prose-ul:my-1
+              prose-ol:list-decimal prose-ol:pl-5 prose-ol:my-1
+              prose-li:my-0.5
+              prose-strong:text-gray-900
+              prose-a:text-green-600
+            ">
+              <ReactMarkdown>{answer}</ReactMarkdown>
+            </div>
 
             {/* Sources at the bottom */}
             {sources.length > 0 && (
